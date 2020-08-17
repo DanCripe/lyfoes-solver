@@ -13,12 +13,13 @@ type Board struct {
 }
 
 type Move struct {
-	From int
-	To   int
+	From  int
+	To    int
+	Color Color
 }
 
 func (m *Move) Print() {
-	fmt.Printf("%d -> %d\n", m.From+1, m.To+1)
+	fmt.Printf("%2d -> %2d %s\n", m.From+1, m.To+1, ColorMapFull[m.Color])
 }
 
 func NewBoard(data string) *Board {
@@ -100,9 +101,8 @@ func (b *Board) Solve() {
 	var idle int
 
 	for !b.Solved() && !b.NoMoves() && len(b.Moves) < 5000 {
-		// for count := 0; !b.Solved() && !b.NoMoves() && count < len(b.Stacks)*len(b.Stacks)*10; count++
 		idle++
-		if idle == 100 {
+		if idle == 110 {
 			return
 		}
 		to := b.RandomToColumn()
@@ -113,55 +113,37 @@ func (b *Board) Solve() {
 		if b.checkReversesPrevious(from, to) {
 			continue
 		}
+		if b.monochromeReversed(from, to) {
+			from, to = to, from
+		}
 		stack1 := b.Stacks[from]
 		stack2 := b.Stacks[to]
-		/*
-			if stack1.Depth() == 0 {
-				fmt.Printf("from empty column\n")
-				// can't move from empty column
-				continue
-			}
-			if stack2.Depth() == b.MaxDepth {
-				fmt.Printf("to full column\n")
-				// can't move to full column
-				continue
-			}
-			if stack2.Depth() != 0 && stack2.Top() != stack1.Top() {
-				fmt.Printf("different colors\n")
-				// can't move to partially full column with a different color
-				continue
-			}
-			if stack1.Depth() == 1 && stack2.Depth() == 0 {
-				// don't both moving from column with 1 item to column with 0 items
-				fmt.Printf("1 to empty\n")
-				continue
-			}
-			if stack2.Depth() == 0 {
-				monochrome := true
-				color := stack1.Top()
-				for _, c := range stack2.Items {
-					if c != color {
-						monochrome = false
-						break
-					}
-				}
-				if monochrome {
-					fmt.Printf("monochrome\n")
-					continue
-				}
-			}
-		*/
-		if len(b.Moves) != 0 {
-			lastMove := b.Moves[len(b.Moves)-1]
-			if lastMove.From == to && lastMove.To == from {
-				// don't undo a move that was just done
-				continue
-			}
-		}
+
 		idle = 0
-		b.Moves = append(b.Moves, Move{From: from, To: to})
+		b.Moves = append(b.Moves, Move{From: from, To: to, Color: stack1.Top()})
 		stack2.Push(stack1.Pop())
 	}
+}
+
+func monochrome(stack *Stack) bool {
+	color := stack.Top()
+	for _, c := range stack.Items {
+		if c != color {
+			return false
+		}
+	}
+	return true
+}
+
+func (b *Board) monochromeReversed(from, to int) bool {
+	stack1 := b.Stacks[from]
+	stack2 := b.Stacks[to]
+	if stack1.Depth() == 3 && stack2.Depth() == 1 {
+		if monochrome(stack1) {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *Board) RandomFromColumn(to int) int {
@@ -241,7 +223,7 @@ func (b *Board) NoMoves() bool {
 }
 
 func (b *Board) checkReversesPrevious(from, to int) bool {
-	for i := len(b.Moves) - 1; i > 0; i-- {
+	for i := len(b.Moves) - 1; i >= 0; i-- {
 		m := b.Moves[i]
 		if m.From == to && m.To == from {
 			return true

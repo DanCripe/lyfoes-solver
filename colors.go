@@ -52,3 +52,20 @@ var ReverseColorMap = map[string]Color{
 	"Ye": Yellow,
 	"Pu": Purple,
 }
+
+var ColorMapFull = map[Color]string{
+	DarkBlue:    "Dark Blue",
+	MediumBlue:  "Medium Blue",
+	LightBlue:   "Light Blue",
+	DarkRed:     "Dark Red",
+	MediumRed:   "Medium Red",
+	LightRed:    "Light Red",
+	DarkGreen:   "Dark Green",
+	MediumGreen: "Medium Green",
+	LightGreen:  "Light Green",
+	White:       "White",
+	Grey:        "Grey",
+	Orange:      "Orange",
+	Yellow:      "Yellow",
+	Purple:      "Purple",
+}
