@@ -18,7 +18,7 @@ type Move struct {
 }
 
 func (m *Move) Print() {
-	fmt.Printf("%d -> %d\n", m.From, m.To)
+	fmt.Printf("%d -> %d\n", m.From+1, m.To+1)
 }
 
 func NewBoard(data string) *Board {
@@ -108,6 +108,9 @@ func (b *Board) Solve() {
 		to := b.RandomToColumn()
 		from := b.RandomFromColumn(to)
 		if from == -1 {
+			continue
+		}
+		if b.checkReversesPrevious(from, to) {
 			continue
 		}
 		stack1 := b.Stacks[from]
@@ -235,4 +238,17 @@ func (b *Board) NoMoves() bool {
 		}
 	}
 	return true
+}
+
+func (b *Board) checkReversesPrevious(from, to int) bool {
+	for i := len(b.Moves) - 1; i > 0; i-- {
+		m := b.Moves[i]
+		if m.From == to && m.To == from {
+			return true
+		}
+		if m.From == from || m.From == to || m.To == from || m.To == to {
+			return false
+		}
+	}
+	return false
 }
