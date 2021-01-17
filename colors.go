@@ -3,7 +3,8 @@ package main
 type Color int
 
 const (
-	DarkBlue Color = iota
+	Nothing Color = iota
+	DarkBlue
 	MediumBlue
 	LightBlue
 	DarkRed
@@ -51,6 +52,7 @@ var ReverseColorMap = map[string]Color{
 	"Or": Orange,
 	"Ye": Yellow,
 	"Pu": Purple,
+	"..": Nothing,
 }
 
 var ColorMapFull = map[Color]string{

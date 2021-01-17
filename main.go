@@ -1,37 +1,53 @@
 package main
 
 import (
-	"fmt"
+	"os/signal"
+	"sync"
 	"io/ioutil"
+	"math/rand"
 	"os"
+	"syscall"
 	"time"
 )
+
+var m sync.Mutex
+var index int
 
 func main() {
 	if len(os.Args) < 2 {
 		panic("must specify file")
 	}
 	data, err := ioutil.ReadFile(os.Args[1])
+
 	if err != nil {
 		panic("error reading file")
 	}
 
-	pot := 100
-
-	var count int
+	for i := 0; i < 4; i++ {
+		go run(i, string(data))
+	}
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, syscall.SIGUSR1)
 	for {
-		count++
-		b := NewBoard(string(data))
+		<-sigch
+		SetVerbose(true)
+		time.Sleep(time.Second)
+		SetVerbose(false)
+	}
+}
+
+func run(i int, data string) {
+	r := rand.New(rand.NewSource(int64(i)))
+	for {
+		m.Lock()
+		idx := index
+		index += 1
+		m.Unlock()
+		b := NewBoard(data, r, idx)
 		b.Solve()
-		// b.Print()
 		if b.Solved() {
 			b.Print()
-			fmt.Printf("after %d iterations\n", count)
 			os.Exit(0)
-		}
-		if count == pot {
-			fmt.Printf("%d %s\n", count, time.Now().String())
-			pot *= 10
 		}
 	}
 }

@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"log"
 )
 
 type Board struct {
+	ID	 int
 	MaxDepth int
 	Stacks   []*Stack
 	Moves    []Move
+	Rand     *rand.Rand
+	verbose  bool
 }
 
 type Move struct {
@@ -18,12 +22,31 @@ type Move struct {
 	Color Color
 }
 
+var verbose bool
+
+func Verbose() bool {
+	m.Lock()
+	defer m.Unlock()
+	return verbose
+}
+
+func SetVerbose(v bool) {
+	m.Lock()
+	defer m.Unlock()
+	verbose = v
+}
+
 func (m *Move) Print() {
 	fmt.Printf("%2d -> %2d %s\n", m.From+1, m.To+1, ColorMapFull[m.Color])
 }
 
-func NewBoard(data string) *Board {
-	b := &Board{}
+func NewBoard(data string, r *rand.Rand, id int) *Board {
+	countMap := make(map[Color]int)
+	b := &Board{Rand: r, ID: id}
+	if Verbose() {
+		b.verbose = true
+		SetVerbose(false)
+	}
 	lines := strings.Split(data, "\n")
 	lastLine := lines[len(lines)-1]
 	if len(lastLine) == 0 {
@@ -39,16 +62,33 @@ func NewBoard(data string) *Board {
 				b.Stacks = append(b.Stacks, new(Stack))
 			}
 			// always two empty stacks
-			b.Stacks = append(b.Stacks, new(Stack))
-			b.Stacks = append(b.Stacks, new(Stack))
+			// except when we specify the whole board
+			// b.Stacks = append(b.Stacks, new(Stack))
+			// b.Stacks = append(b.Stacks, new(Stack))
 		}
-		if len(columns)+2 != len(b.Stacks) {
+		// if len(columns)+2 != len(b.Stacks) {
+		if len(columns) != len(b.Stacks) {
 			panic("rows of unequal lengths")
 		}
 		for idx, column := range columns {
 			stack := b.Stacks[idx]
 			color := ReverseColorMap[column]
+			if color == Nothing {
+				continue
+			}
 			stack.Push(color)
+			countMap[color]++
+		}
+	}
+	compare := -1
+	for c, count := range countMap {
+		if compare == -1 {
+			compare = count
+			continue
+		}
+		if count != compare {
+			fmt.Printf("color %d %d\n", c, count)
+			panic("unmatched color count")
 		}
 	}
 
@@ -113,11 +153,15 @@ func (b *Board) Solve() {
 		if b.checkReversesPrevious(from, to) {
 			continue
 		}
-		if b.monochromeReversed(from, to) {
+		if b.monochromeReversed(from) {
 			from, to = to, from
 		}
 		stack1 := b.Stacks[from]
 		stack2 := b.Stacks[to]
+
+		if b.verbose {
+			log.Printf("%05d: From %02d (%s) to %02d\n", b.ID, from, ColorMap[stack1.Top()], to)
+		}
 
 		idle = 0
 		b.Moves = append(b.Moves, Move{From: from, To: to, Color: stack1.Top()})
@@ -135,13 +179,10 @@ func monochrome(stack *Stack) bool {
 	return true
 }
 
-func (b *Board) monochromeReversed(from, to int) bool {
+func (b *Board) monochromeReversed(from int) bool {
 	stack1 := b.Stacks[from]
-	stack2 := b.Stacks[to]
-	if stack1.Depth() == 3 && stack2.Depth() == 1 {
-		if monochrome(stack1) {
-			return true
-		}
+	if stack1.Depth() == 3 && monochrome(stack1) {
+		return true
 	}
 	return false
 }
@@ -182,7 +223,7 @@ func (b *Board) RandomFromColumn(to int) int {
 	if len(candidates) == 0 {
 		return -1
 	}
-	return candidates[rand.Int()%len(candidates)]
+	return candidates[b.Rand.Int()%len(candidates)]
 }
 
 func (b *Board) RandomToColumn() int {
@@ -193,7 +234,7 @@ func (b *Board) RandomToColumn() int {
 		}
 	}
 
-	return candidates[rand.Int()%len(candidates)]
+	return candidates[b.Rand.Int()%len(candidates)]
 }
 
 func (b *Board) NoMoves() bool {
